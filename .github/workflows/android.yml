@@ -38,6 +38,7 @@ jobs:
           haxelib install flixel-addons
           haxelib install flixel-ui
           haxelib install hscript
+          haxelib install newgrounds
           haxelib install actuate
           haxelib install polymod
           haxelib install extension-webm
