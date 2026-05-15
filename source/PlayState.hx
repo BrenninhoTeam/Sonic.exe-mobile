@@ -7,7 +7,7 @@ import openfl.ui.Keyboard;
 import openfl.events.KeyboardEvent;
 import Replay.Ana;
 import Replay.Analysis;
-#if cpp
+#if desktop
 import webm.WebmPlayer;
 #end
 import flixel.input.keyboard.FlxKey;
