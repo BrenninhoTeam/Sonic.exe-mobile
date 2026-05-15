@@ -10,6 +10,10 @@ import flixel.FlxState;
 import flixel.FlxG;
 import flixel.util.FlxColor;
 
+#if desktop
+import webm.WebmPlayer;
+#end
+
 class Main extends Sprite
 {
 	var gameWidth:Int = 1280;
@@ -25,7 +29,9 @@ class Main extends Sprite
 
 	public static var watermarks:Bool = true;
 
+	#if desktop
 	public static var webmHandler:WebmHandler;
+	#end
 
 	var game:FlxGame;
 	var fpsCounter:FPS;
@@ -87,7 +93,8 @@ class Main extends Sprite
 		addChild(game);
 
 		#if web
-		var videoSource:String = "assets/videos/DO NOT DELETE OR GAME WILL CRASH/dontDelete.webm";
+
+		var webVideo:String = "assets/videos/DO NOT DELETE OR GAME WILL CRASH/dontDelete.webm";
 
 		var videoHandler = new VideoHandler();
 
@@ -99,9 +106,11 @@ class Main extends Sprite
 		videoHandler.init2();
 
 		GlobalVideo.setVid(videoHandler);
-		videoHandler.source(videoSource);
+		videoHandler.source(webVideo);
 
-		#elseif desktop
+		#end
+
+		#if desktop
 
 		var webmSource:String = "assets/videos/DO NOT DELETE OR GAME WILL CRASH/dontDelete.webm";
 
