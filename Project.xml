@@ -119,7 +119,6 @@
 	<haxelib name="actuate"/>
 
 	<haxelib name="extension-webm" if="desktop"/>
-	<haxelib name="extension-webm"/>
 
 	<haxelib name="flixel-ui"/>
 	<haxelib name="newgrounds"/>
