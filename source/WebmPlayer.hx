@@ -2,6 +2,7 @@ package;
 
 import openfl.display.Sprite;
 import openfl.events.Event;
+import openfl.events.NetStatusEvent;
 import openfl.media.Video;
 import openfl.net.NetConnection;
 import openfl.net.NetStream;
@@ -13,63 +14,86 @@ import vlc.VlcBitmap;
 
 class WebmPlayer extends Sprite
 {
-	public var isPlaying:Bool = false;
-	public var paused:Bool = false;
-	public var repeat:Int = 0;
+	public var isPlaying:Bool  = false;
+	public var paused:Bool     = false;
+	public var repeat:Int      = 0;
+
+	public var onComplete:Void->Void = null;
+	public var onError:String->Void  = null;
+
 	public var bitmapData(default, null):Dynamic;
 
 	#if desktop
-	public var vlcBitmap:VlcBitmap;
+	private var vlcBitmap:VlcBitmap;
+	#elseif mobile
+	private var video:Video;
+	private var netStream:NetStream;
+	private var netConnection:NetConnection;
 	#end
 
-	#if mobile
-	public var video:Video;
-	public var netStream:NetStream;
-	public var netConnection:NetConnection;
-	#end
+	private var _repeatCount:Int  = 0;
+	private var _sourcePath:String = "";
 
 	public function new()
 	{
 		super();
+		visible = false;
 	}
+
+	// ---------------------------------------------------------------
+	//  Playback
+	// ---------------------------------------------------------------
 
 	public function source(path:String):Void
 	{
+		_sourcePath = path;
+		_repeatCount = 0;
+		_setupPlayer(path);
+	}
+
+	private function _setupPlayer(path:String):Void
+	{
 		#if desktop
 
-		vlcBitmap = new VlcBitmap();
+		if (vlcBitmap == null)
+		{
+			vlcBitmap = new VlcBitmap();
+			vlcBitmap.onEndReached = _onEndReached;
+			vlcBitmap.onEncounteredError = _onVlcError;
+			addChild(vlcBitmap);
+		}
+
 		vlcBitmap.set_width(FlxG.width);
 		vlcBitmap.set_height(FlxG.height);
-
-		addChild(vlcBitmap);
-
-		vlcBitmap.play(checkFile(path));
+		vlcBitmap.play(_buildFilePath(path));
 
 		bitmapData = vlcBitmap.bitmapData;
-		isPlaying = true;
+		isPlaying  = true;
+		visible    = true;
 
-		#elif mobile
+		#elseif mobile
 
-		video = new Video();
-		video.width = FlxG.width;
-		video.height = FlxG.height;
+		_destroyMobile();
 
+		video = new Video(FlxG.width, FlxG.height);
 		addChild(video);
 
 		netConnection = new NetConnection();
+		netConnection.addEventListener(NetStatusEvent.NET_STATUS, _onNetStatus);
 		netConnection.connect(null);
 
 		netStream = new NetStream(netConnection);
-
-		netStream.client =
-		{
-			onMetaData: function(meta:Dynamic) {}
+		netStream.addEventListener(NetStatusEvent.NET_STATUS, _onNetStatus);
+		netStream.client = {
+			onMetaData:  function(meta:Dynamic) {},
+			onPlayStatus: function(info:Dynamic) {}
 		};
 
 		video.attachNetStream(netStream);
 		netStream.play(path);
 
 		isPlaying = true;
+		visible   = true;
 
 		#end
 	}
@@ -81,16 +105,15 @@ class WebmPlayer extends Sprite
 
 	public function pause():Void
 	{
-		#if desktop
+		if (!isPlaying || paused)
+			return;
 
+		#if desktop
 		if (vlcBitmap != null)
 			vlcBitmap.pause();
-
-		#elif mobile
-
+		#elseif mobile
 		if (netStream != null)
 			netStream.pause();
-
 		#end
 
 		paused = true;
@@ -98,51 +121,155 @@ class WebmPlayer extends Sprite
 
 	public function resume():Void
 	{
-		#if desktop
+		if (!isPlaying || !paused)
+			return;
 
+		#if desktop
 		if (vlcBitmap != null)
 			vlcBitmap.resume();
-
-		#elif mobile
-
+		#elseif mobile
 		if (netStream != null)
 			netStream.resume();
-
 		#end
 
 		paused = false;
 	}
 
+	public function togglePause():Void
+	{
+		if (paused) resume() else pause();
+	}
+
 	public function stop():Void
 	{
 		#if desktop
-
 		if (vlcBitmap != null)
 			vlcBitmap.stop();
-
-		#elif mobile
-
-		if (netStream != null)
-			netStream.close();
-
+		#elseif mobile
+		_destroyMobile();
 		#end
 
 		isPlaying = false;
+		paused    = false;
+		visible   = false;
 	}
 
-	function checkFile(fileName:String):String
+	public function resize(width:Float, height:Float):Void
+	{
+		#if desktop
+		if (vlcBitmap != null)
+		{
+			vlcBitmap.set_width(Std.int(width));
+			vlcBitmap.set_height(Std.int(height));
+		}
+		#elseif mobile
+		if (video != null)
+		{
+			video.width  = width;
+			video.height = height;
+		}
+		#end
+	}
+
+	public function destroy():Void
+	{
+		stop();
+
+		#if desktop
+		if (vlcBitmap != null)
+		{
+			if (contains(vlcBitmap))
+				removeChild(vlcBitmap);
+			vlcBitmap = null;
+		}
+		#elseif mobile
+		_destroyMobile();
+		#end
+
+		onComplete  = null;
+		onError     = null;
+		bitmapData  = null;
+	}
+
+	// ---------------------------------------------------------------
+	//  Internal helpers
+	// ---------------------------------------------------------------
+
+	#if mobile
+	private function _destroyMobile():Void
+	{
+		if (netStream != null)
+		{
+			netStream.close();
+			netStream = null;
+		}
+
+		if (netConnection != null)
+		{
+			netConnection.removeEventListener(NetStatusEvent.NET_STATUS, _onNetStatus);
+			netConnection.close();
+			netConnection = null;
+		}
+
+		if (video != null)
+		{
+			if (contains(video))
+				removeChild(video);
+			video.clear();
+			video = null;
+		}
+	}
+
+	private function _onNetStatus(e:NetStatusEvent):Void
+	{
+		switch (e.info.code)
+		{
+			case "NetStream.Play.StreamNotFound":
+				if (onError != null)
+					onError('Stream not found: $_sourcePath');
+
+			case "NetStream.Play.Complete":
+				_onEndReached();
+		}
+	}
+	#end
+
+	private function _onEndReached():Void
+	{
+		if (repeat < 0 || _repeatCount < repeat)
+		{
+			_repeatCount++;
+			_setupPlayer(_sourcePath);
+			return;
+		}
+
+		isPlaying = false;
+		visible   = false;
+
+		if (onComplete != null)
+			onComplete();
+	}
+
+	#if desktop
+	private function _onVlcError():Void
+	{
+		isPlaying = false;
+		if (onError != null)
+			onError('VLC failed to play: $_sourcePath');
+	}
+	#end
+
+	private function _buildFilePath(fileName:String):String
 	{
 		#if desktop
 
-		var pDir = "";
-		var appDir = "file:///" + Sys.getCwd() + "/";
+		if (fileName.startsWith("http://") || fileName.startsWith("https://") || fileName.startsWith("file:///"))
+			return fileName;
 
-		if (fileName.indexOf(":") == -1)
-			pDir = appDir;
-		else if (fileName.indexOf("file://") == -1 || fileName.indexOf("http") == -1)
-			pDir = "file:///";
+		if (fileName.indexOf(":") != -1)
+			return "file:///" + fileName;
 
-		return pDir + fileName;
+		return "file:///" + Sys.getCwd() + "/" + fileName;
 
 		#else
 
