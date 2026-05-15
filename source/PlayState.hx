@@ -7,8 +7,8 @@ import openfl.ui.Keyboard;
 import openfl.events.KeyboardEvent;
 import Replay.Ana;
 import Replay.Analysis;
-#if desktop
-import webm.WebmPlayer;
+#if cpp
+import WebmPlayer;
 #end
 import flixel.input.keyboard.FlxKey;
 import haxe.Exception;
