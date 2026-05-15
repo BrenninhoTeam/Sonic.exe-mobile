@@ -29,9 +29,11 @@ jobs:
         with:
           haxe-version: 4.2.5
 
-      - name: Install Libraries
+      - name: Install Haxelib Dependencies
         run: |
+          mkdir -p ~/haxelib
           haxelib setup ~/haxelib
+
           haxelib install lime
           haxelib install openfl
           haxelib install flixel
@@ -56,13 +58,21 @@ jobs:
           sdkmanager "platforms;android-34"
           sdkmanager "build-tools;34.0.0"
 
-      - name: Setup Lime
+      - name: Setup Lime Android
         run: |
-          haxelib run lime setup
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
+          export ANDROID_SDK=$ANDROID_SDK_ROOT
+
+          haxelib run lime setup android
           haxelib run lime config ANDROID_SDK $ANDROID_SDK_ROOT
+          haxelib run lime config JAVA_HOME $JAVA_HOME
 
       - name: Build APK
-        run: haxelib run lime build android -release
+        run: |
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
+          export ANDROID_SDK=$ANDROID_SDK_ROOT
+
+          haxelib run lime build android -release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
