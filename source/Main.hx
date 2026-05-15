@@ -69,15 +69,15 @@ class Main extends Sprite
 		#end
 
 		game = new FlxGame(
-			gameWidth,
-			gameHeight,
-			initialState,
-			zoom,
-			framerate,
-			framerate,
-			skipSplash,
-			startFullscreen
-		);
+	 gameWidth,
+	 gameHeight,
+	 initialState,
+  zoom,
+	 framerate,
+	 framerate,
+	 skipSplash,
+	 startFullscreen
+);
 
 		addChild(game);
 
