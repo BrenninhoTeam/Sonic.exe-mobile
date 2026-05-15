@@ -4,6 +4,7 @@ import openfl.display.Sprite;
 import openfl.events.Event;
 import openfl.Lib;
 import openfl.display.FPS;
+
 import flixel.FlxGame;
 import flixel.FlxState;
 import flixel.FlxG;
@@ -13,13 +14,17 @@ class Main extends Sprite
 {
 	var gameWidth:Int = 1280;
 	var gameHeight:Int = 720;
+
 	var initialState:Class<FlxState> = TitleState;
+
 	var zoom:Float = -1;
 	var framerate:Int = 120;
+
 	var skipSplash:Bool = true;
 	var startFullscreen:Bool = false;
 
-	public static var watermarks = true;
+	public static var watermarks:Bool = true;
+
 	public static var webmHandler:WebmHandler;
 
 	var game:FlxGame;
@@ -69,47 +74,61 @@ class Main extends Sprite
 		#end
 
 		game = new FlxGame(
-	 gameWidth,
-	 gameHeight,
-	 initialState,
-  zoom,
-	 framerate,
-	 framerate,
-	 skipSplash,
-	 startFullscreen
-);
+			gameWidth,
+			gameHeight,
+			initialState,
+			zoom,
+			framerate,
+			framerate,
+			skipSplash,
+			startFullscreen
+		);
 
 		addChild(game);
 
 		#if web
-		var webSource:String = "assets/videos/DO NOT DELETE OR GAME WILL CRASH/dontDelete.webm";
+		var videoSource:String = "assets/videos/DO NOT DELETE OR GAME WILL CRASH/dontDelete.webm";
 
-		var vHandler = new VideoHandler();
-		vHandler.init1();
-		vHandler.video.name = "WEB_VIDEO";
-		addChild(vHandler.video);
-		vHandler.init2();
-		GlobalVideo.setVid(vHandler);
-		vHandler.source(webSource);
+		var videoHandler = new VideoHandler();
+
+		videoHandler.init1();
+		videoHandler.video.name = "WEB_VIDEO";
+
+		addChild(videoHandler.video);
+
+		videoHandler.init2();
+
+		GlobalVideo.setVid(videoHandler);
+		videoHandler.source(videoSource);
+
 		#elseif desktop
-		var desktopSource:String = "assets/videos/DO NOT DELETE OR GAME WILL CRASH/dontDelete.webm";
+
+		var webmSource:String = "assets/videos/DO NOT DELETE OR GAME WILL CRASH/dontDelete.webm";
 
 		var webmHandle = new WebmHandler();
-		webmHandle.source(desktopSource);
+
+		webmHandle.source(webmSource);
 		webmHandle.makePlayer();
+
 		webmHandle.webm.name = "WEBM_VIDEO";
+
 		addChild(webmHandle.webm);
+
 		GlobalVideo.setWebm(webmHandle);
+
 		#end
 
 		#if !mobile
+
 		fpsCounter = new FPS(10, 3, 0xFFFFFF);
+
 		addChild(fpsCounter);
 
 		if (FlxG.save.data.fps == null)
 			FlxG.save.data.fps = true;
 
 		toggleFPS(FlxG.save.data.fps);
+
 		#end
 	}
 
